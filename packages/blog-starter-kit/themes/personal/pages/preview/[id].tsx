@@ -14,15 +14,15 @@ import {
 	DraftByIdDocument,
 	DraftByIdQuery,
 	DraftByIdQueryVariables,
-	Post,
 	Publication,
 	PublicationByHostDocument,
 	PublicationByHostQuery,
 	PublicationByHostQueryVariables,
 } from '../../generated/graphql';
+import type { Post as PostType } from '../../generated/graphql';
 
 type Props = {
-	post: Post;
+	post: PostType;
 	publication: Publication;
 };
 
@@ -91,33 +91,40 @@ type Params = {
 };
 
 export async function getStaticProps({ params }: Params) {
-	const [dataDraft, dataPublication] = await Promise.all([
-		request<DraftByIdQuery, DraftByIdQueryVariables>(
-			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
-			DraftByIdDocument,
-			{
-				id: params.id,
-			},
-		),
-		request<PublicationByHostQuery, PublicationByHostQueryVariables>(
-			process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
-			PublicationByHostDocument,
-			{
-				host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
-			},
-		),
-	]);
+	try {
+		const [dataDraft, dataPublication] = await Promise.all([
+			request<DraftByIdQuery, DraftByIdQueryVariables>(
+				process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
+				DraftByIdDocument,
+				{
+					id: params.id,
+				},
+			),
+			request<PublicationByHostQuery, PublicationByHostQueryVariables>(
+				process.env.NEXT_PUBLIC_HASHNODE_GQL_ENDPOINT,
+				PublicationByHostDocument,
+				{
+					host: process.env.NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST,
+				},
+			),
+		]);
 
-	const publication = dataPublication.publication;
-	const post = dataDraft.draft;
+		const publication = dataPublication.publication;
+		const post = dataDraft.draft;
 
-	return {
-		props: {
-			post,
-			publication,
-		},
-		revalidate: 1,
-	};
+		return {
+			props: {
+				post,
+				publication,
+			},
+			revalidate: 1,
+		};
+	} catch {
+		return {
+			notFound: true,
+			revalidate: 1,
+		};
+	}
 }
 
 export async function getStaticPaths() {

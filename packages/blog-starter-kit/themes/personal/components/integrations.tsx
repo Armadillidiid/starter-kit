@@ -17,7 +17,7 @@ export function Integrations() {
 		koalaPublicKey,
 		msClarityID,
 	} = publication.integrations ?? {};
-	const domainURL = new URL(publication.url).hostname;
+	const domainURL = new URL(publication.url ?? 'https://hashnode.com').hostname;
 
 	let fbPixel = `
     !function(f,b,e,v,n,t,s)
