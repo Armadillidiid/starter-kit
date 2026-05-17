@@ -15,44 +15,47 @@ const getBasePath = () => {
 };
 
 const getRedirectionRules = async () => {
-	const query = gql`
-		query GetRedirectionRules {
-			publication(host: "${host}") {
-				id
-				redirectionRules {
-					source
-					destination
-					type
+	try {
+		const query = gql`
+			query GetRedirectionRules {
+				publication(host: "${host}") {
+					id
+					redirectionRules {
+						source
+						destination
+						type
+					}
 				}
 			}
+		`;
+
+		const data = await request(GQL_ENDPOINT, query);
+
+		if (!data.publication) {
+			return [];
 		}
-  	`;
 
-	const data = await request(GQL_ENDPOINT, query);
+		const redirectionRules = data.publication.redirectionRules;
 
-	if (!data.publication) {
-		throw 'Please ensure you have set the env var NEXT_PUBLIC_HASHNODE_PUBLICATION_HOST correctly.';
+		const redirects = redirectionRules
+			.filter((rule) => {
+				if (rule.source.indexOf('*') !== -1) return false;
+				if (!rule.destination) return false;
+				return true;
+			})
+			.map((rule) => {
+				const source = rule.source.startsWith('/') ? rule.source : `/${rule.source}`;
+				return {
+					source,
+					destination: rule.destination,
+					permanent: rule.type === 'PERMANENT',
+				};
+			});
+
+		return redirects;
+	} catch {
+		return [];
 	}
-
-	const redirectionRules = data.publication.redirectionRules;
-
-	// convert to next.js redirects format
-	const redirects = redirectionRules
-		.filter((rule) => {
-			// Hashnode gives an option to set a wildcard redirect,
-			// but it doesn't work properly with Next.js
-			// the solution is to filter out all the rules with wildcard and use static redirects for now
-			return rule.source.indexOf('*') === -1;
-		})
-		.map((rule) => {
-			return {
-				source: rule.source,
-				destination: rule.destination,
-				permanent: rule.type === 'PERMANENT',
-			};
-		});
-
-	return redirects;
 };
 
 /**
